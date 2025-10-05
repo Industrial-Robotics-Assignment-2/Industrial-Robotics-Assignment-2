@@ -8,7 +8,7 @@ from math import pi
 
 def funcPoint(func, var, start, end, step):
 
-    # Takes a Sympy function of x and returns a list of points between the start and end. 
+    # Takes an explicit Sympy function of x and returns a list of points between the start and end. 
 
     # func: Sympy Function. i.e. f(x)
     # var: Input variable. i.e. x. can only be one
@@ -20,24 +20,27 @@ def funcPoint(func, var, start, end, step):
     x = np.linspace(start, end, step )              # Creates array of all x values
     y = f(x)                                        # Computes all y values
 
-    p = np.column_stack((x,y))                      # Creates array of sampled points. Rows: Points, Columns: x,y
+    p = np.column_stack((x,y))                      # Creates array of sampled points. [Rows: Points | Columns: x,y]
 
     return p                                        # returns array of points
 
 def pointTransform(x=None,y=None,z=None):
 
-    # Takes 
+    # Takes array of x, y and z values and returns a list of SE3 Transform of points. 
+    # If no argument is given for a value it defaults to 0, 
+    # If a scalar is given for a value all points will use that scalar
+    # probably useless function
 
-    x_arr = np.atleast_1d(0.0 if x is None else x)
+    x_arr = np.atleast_1d(0.0 if x is None else x)                  # Check if argument is given. If not then defaults to zero
     y_arr = np.atleast_1d(0.0 if y is None else y)
     z_arr = np.atleast_1d(0.0 if z is None else z)
 
-    x_b, y_b, z_b = np.broadcast_arrays(x_arr, y_arr, z_arr)
+    x_b, y_b, z_b = np.broadcast_arrays(x_arr, y_arr, z_arr)        # Broadcast arrays to ensure equal size
 
-    T = []
+    T = []                                                          # List for SE3 Transforms
     for i in range(len(x_b)):
-        T.append(SE3(x_b[i],y_b[i],z_b[i]))
-    return T
+        T.append(SE3(x_b[i],y_b[i],z_b[i]))                         # Append SE3 Transforms of x, y and z to T
+    return T                                                        # Return list fo SE3 transforms
 
 def RMRC(rob,q,points,t=5,steps=100,):
 
@@ -64,25 +67,25 @@ def RMRC(rob,q,points,t=5,steps=100,):
 
 def funcPoint_Demo():
 
-    x = sp.symbols('x')
-    f = sp.cos(x)
+    x = sp.symbols('x')                             # Create Sympy Symbol
+    f = sp.cos(x)                                   # Create Sympy Function
 
-    points = funcPoint(f, x, 0, 2*pi, 100)
+    points = funcPoint(f, x, 0, 2*pi, 100)          # Compute points using funcPoint function
 
     for i in range(len(points)):
-        print(points[i,:])
+        print(points[i,:])                          # Print
 
 def pointTransform_Demo():
 
-    x = sp.symbols('x')
-    f = sp.cos(x)
+    x = sp.symbols('x')                             # Create Sympy Symbol
+    f = sp.cos(x)                                   # Create Sympy Function
 
-    p = funcPoint(f, x, 0, 2*pi, 100)
+    p = funcPoint(f, x, 0, 2*pi, 100)               # Compute points using funcPoint function
 
-    T = pointTransform(x=p[:,0],y=p[:,1])
+    T = pointTransform(x=p[:,0],y=p[:,1])           # Create list of SE3 Transforms using pointTransform Function
     
     for i in range(len(T)):
-        print(T[i])
+        print(T[i])                                 # Print
 
 def RMRC_Demo():
     pass
