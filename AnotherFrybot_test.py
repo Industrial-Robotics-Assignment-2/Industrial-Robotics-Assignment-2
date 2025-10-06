@@ -40,6 +40,8 @@ q = robot.qz
 
 fig = robot.plot(q, jointaxes=False)
 
+
+
 x1 = np.array([-0.3, -0.4, 0])
 x2 = np.array([0, -0.4, 0])
 x3 = np.array([0.1, -0.4, 0.1])
@@ -86,11 +88,11 @@ for q in q_matrix1:
     fig.step(0.05)
 
 # Scooping move variables
-M2 = np.hstack((1, 1, 1, 1, 1, 1))      # Full translation + rotation
 delta_t2 = 0.05
 min_manip_measure2 = 0.1
 steps2 = 100
 delta_theta = np.pi/2 / steps2
+theta = np.zeros([3, steps2])  # EE orientation (roll, pitch, yaw)
 m2 = np.zeros([1, steps2])
 error2 = np.empty([6, steps2])
 mask2 = [1,1,1,1,1,1]  # translation + rotation
@@ -98,161 +100,41 @@ x_path2 = np.zeros([3, steps2])
 
 # 2.2: Create an arbitrary cartesian trajectory for the robot end-effector to follow
 for i in range(steps2):
-    x_path2[:, i] = [1.5 * np.cos(delta_theta * i) + 0.45 * np.cos(delta_theta * i),
-            1.5 * np.sin(delta_theta * i) + 0.45 * np.cos(delta_theta * i),
-              0]
+    theta_i = delta_theta * i
+    x_path2[:, i] = [0.1 * np.sin(theta_i), -0.4, 0.1 * (1 - np.cos(theta_i))]  # keep Z constant for horizontal circle
+    theta[:, i] = [0, -theta_i, 0]  # roll=0, pitch=0, yaw=angle
 
 
 # Scoop Fries up trajectory
-q_matrix2 = [robot.ikine_LM(T2, q0= np.zeros(robot.n), mask= mask2).q]
+q_matrix2 = np.zeros([steps2, robot.n])
+# q_matrix2[0,:] = robot.ikine_LM(SE3(x_path2[:,0]) @ SE3.Rx(np.pi) @ SE3.Ry(theta[1,0]), q0=np.zeros(robot.n), mask=mask2).q
+q_matrix2[0,:] = q_matrix1[-1, :]  # start at end of previous trajectory
 
 # 2.4: Use Resolved Motion Rate Control (RMRC) to solve joint velocities at each time step,
 # such that end-effector follows the defined Cartesian trajectory
 for i in range(steps2-1):
-    xdot = (x_path2[:,i+1] - x_path2[:,i])/delta_t2                                          # Calculate velocity at discrete time step
-    J = robot.jacob0(q_matrix2[i])                                                  # Get the Jacobian at the current state                                                             # Take only first 2 rows
+    xdot = np.zeros(6)
+    xdot[0:3] = (x_path2[:, i+1] - x_path2[:, i]) / delta_t2
+    xdot[3:6] = (theta[:, i+1] - theta[:, i]) / delta_t2
+    J = robot.jacob0(q_matrix2[i])                                                  # Get the Jacobian at the current state
     m2[:,i] = np.sqrt(linalg.det(J @ J.T))                                       # Measure of Manipulability
 
     # Apply Damped Least Squares for configurations with low manipulability
     if m2[:,i] < min_manip_measure2:
-        qdot = linalg.inv(J.T @ J + 0.01 * np.eye(J.shape[1])) @ J.T @ xdot
+        qdot = linalg.pinv(J.T @ J + 0.01 * np.eye(J.shape[1])) @ J.T @ xdot
     else:
-        qdot = linalg.inv(J) @ xdot                                             # Solve velocitities via RMRC
+        qdot = linalg.pinv(J) @ xdot                                             # Solve velocitities via RMRC
 
     error2[:,i] = xdot - J@qdot                                                  # Calculate and store velocity error
-    q_matrix2.append(q_matrix2[i] + delta_t2 * qdot)                               # Update next joint state in trajectory
+    q_matrix2[i+1, :] = q_matrix2[i, :] + delta_t2 * qdot                               # Update next joint state in trajectory
 
 # 2.5: Plot trajectory and velocity error
-fig = robot.plot(q_matrix2[0], limits = [-5,5,-5,5,-5,5])       # Plot robot in first joint state
+# fig = robot.plot(q_matrix2[0], limits = [-2,2,-2,2,-2,2])       # Plot robot in first joint state
 # Loop through joint matrix, for each step in trajectory, update robot joint states, get X,Y position of end-effector, plot red marker
 for q in q_matrix2:
     robot.q = q
     pos = robot.fkine(q).A[:3,3]
-    fig.ax.plot(pos[0], pos[1], 'r.', markersize = 5)
+    fig.ax.plot(pos[0], pos[1], pos[2], 'r.', markersize = 5)
     fig.step(0.05)
 
-# # Use trapezoidal interpolation
-# s2 = trapezoidal(0, 1, steps).q
-# x_path2 = np.zeros([3, steps])
-# for i in range(steps):
-#     # x_path2[:, i] = x2*(1-s2[i]) + s2[i]*x3
-#     x_path2[0, i] = x2[0] + 0.1 * np.sin(delta_theta * i)       # x moves linearly
-#     x_path2[1, i] = x2[1]                                       # y constant
-#     x_path2[2, i] = x2[2] + 0.1 * (1 - np.cos(delta_theta * i))      # z follows a quadratic curve (scooping
-
-# q_matrix2 = np.zeros([steps,8])
-# q_matrix2[0, :] = q_matrix1[-1,:]
-
-
-# for i in range(steps-1):
-#     # Cartesian velocity
-#     xdot = np.zeros(6)
-#     xdot[0:3] = (x_path2[:, i+1] - x_path2[:, i]) / delta_t
-#     xdot[3:6] = 0   # keep orientation fixed
-
-
-
-#     J = robot.jacob0(q_matrix2[i])
-#     m[:, i] = np.sqrt(linalg.det(J[:3, :] @ J[:3, :].T))
-
-#     # Damped Least Squares
-#     if m[:, i] < min_manip_measure:
-#         qdot = linalg.pinv(J.T @ J + 0.01*np.eye(J.shape[1])) @ J.T @ xdot
-#     else:
-#         qdot = linalg.pinv(J) @ xdot
-
-#     error[:, i] = xdot - J @ qdot
-#     q_matrix2[i+1, :] = q_matrix2[i, :] + delta_t * qdot
-
-# # Animate scoop trajectory
-# for q in q_matrix2:
-#     robot.q = q
-#     ee_position = robot.fkine(q).A[:3, 3]
-#     fig.ax.plot(ee_position[0], ee_position[1], ee_position[2], 'r.')  # red for scoop
-#     fig.step(0.05)
-
-
-# #Plotting and Graphing   
-# plt.figure('Manipulability of 2-Link Planar')
-# ax = plt.gca()
-# ax.plot(m[0], 'k', linewidth = 1)
-# ax.set_ylabel('Manipulability')
-# ax.set_xlabel('Step')
-# plt.figure('Error Plot')
-# ax = plt.gca()
-# ax.plot(error[0], linewidth=1, label='x-velocity')
-# ax.plot(error[1], linewidth=1, label='y-velocity')
-# ax.set_ylabel('Error(m/s)')
-# ax.set_xlabel('Step')
-# ax.legend(['x-velocity', 'y-velocity'])
-
-input("Enter to close\n")
-
-
-
-
-
-# cyl_viz = CylindricalDHRobotPlot(robot, cylinder_radius=0.01, multicolor=True)
-
-# robot_cyl = cyl_viz.create_cylinders()
-
-# # Launch Swift
-# env = swift.Swift()
-# env.launch()
-
-# #Add Frybox
-# current_dir = os.path.dirname(os.path.abspath(__file__))
-# Frybox_path = os.path.join(current_dir, "ScaledFrybox.stl")
-# Frybox = Mesh(filename=Frybox_path)
-# env.add(Frybox)
-
-# # Add Frybot (with cylinders) to Swift
-# env.add(robot_cyl)
-
-# # # Show zero configuration
-# q = np.zeros(robot.n)
-# # qf = np.array([0, -pi/4, pi/4, 0, pi/2, 0])
-# # q_start = robot.q
-# # q6 = robot.ikine_LM(q, q0=q_start, mask=[1,1,1,1,1,1], joint_limits=True).q
-
-# # print("Joint angles for this pose:", q6)
-# # traj = jtraj(robot.q, q6, 50)
-# # for t in traj.q:
-# #     robot.q = t
-# #     ee_tr = robot.fkine(robot.q)
-# #     env.step(0.02)
-
-# robot_cyl.q = q
-# input("Press Enter to quit...")  # keeps Swift open
-
-
-
-# # Plot local axes for each joint
-# for i in range(robot.n):
-#     T = robot.fkine(q, end=i)  # Get transform up to joint i
-#     origin = T.t
-#     R = T.R
-#     # Axes length
-#     axis_len = 50
-#     # X axis (red)
-#     plt.quiver(origin[0], origin[1], origin[2],
-#                R[0,0]*axis_len, R[1,0]*axis_len, R[2,0]*axis_len,
-#                color='r', linewidth=2)
-#     # Y axis (green)
-#     plt.quiver(origin[0], origin[1], origin[2],
-#                R[0,1]*axis_len, R[1,1]*axis_len, R[2,1]*axis_len,
-#                color='g', linewidth=2)
-#     # Z axis (blue)
-#     plt.quiver(origin[0], origin[1], origin[2],
-#                R[0,2]*axis_len, R[1,2]*axis_len, R[2,2]*axis_len,
-#                color='b', linewidth=2)
-
-# plt.title("Robot with Local Axes at Each Joint")
-# plt.show()
-
-input("Press Enter to open teach window...")
-# plt.close()
-# fig = robot.teach(q, block=False)
-# while not keyboard.is_pressed('enter'):
-#     fig.step(0.05)
-# fig.close()
+input("Press Enter to exit...") 
