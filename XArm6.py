@@ -1,6 +1,7 @@
-# XArm6_simple.py
 import swift
 from roboticstoolbox import DHLink, DHRobot
+from roboticstoolbox import jtraj
+
 from ir_support import CylindricalDHRobotPlot
 from math import pi
 import time
@@ -21,8 +22,7 @@ class XArm6(DHRobot):
         links = [DHLink(a=a[i], alpha=alpha[i], d=d[i], qlim=qlim[i]) for i in range(6)]
 
         # Initialize DHRobot
-        super().__init__(links, name="XArm6")
-
+        super().__init__(links, name='XArm6')
         # Add cylindrical visualization
         cyl_viz = CylindricalDHRobotPlot(self, cylinder_radius=0.03, color="#3478f6")
         cyl_viz.create_cylinders()
@@ -41,13 +41,19 @@ if __name__ == "__main__":
 
     # Add robot to environment
     env.add(robot)
+    print(f"hello")
+
     env.step()
+    print(f"hi")
+
 
     # ----------------------------
     # Example joint-space trajectory
     q_start = robot.q
     q_goal = [0, -pi/4, pi/3, 0, pi/6, 0]
-    q_traj = robot.jtraj(q_start, q_goal, 50).q
+    q_traj = jtraj(q_start, q_goal, 50).q
+    print(f"bye")
+
 
     # Animate trajectory
     for q in q_traj:
@@ -57,3 +63,4 @@ if __name__ == "__main__":
     # Hold final position
     env.hold()
     time.sleep(2)
+
