@@ -10,8 +10,6 @@ from math import pi
 import spatialgeometry as sg
 from test import Robot_Sim as rs
 
-import CytonGamma300
-
 def pos_err(target, solution):
     pos_error = np.linalg.norm(solution - target)
     return pos_error
@@ -169,4 +167,5 @@ if __name__ == "__main__":
     input("Press Enter for next demo")
 
     RMRC_Demo()
+
     input("Press Enter for next demo")
