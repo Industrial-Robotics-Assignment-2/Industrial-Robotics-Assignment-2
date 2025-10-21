@@ -159,6 +159,7 @@ class JackRobot:
             xdot[3:6] = (theta_path[:, i+1] - theta_path[:, i]) / delta_t
             J = self.robot.jacob0(q_matrix2[i])
             m[:, i] = np.sqrt(linalg.det(J @ J.T))
+            
             if m[:, i] < min_manip_measure:
                 qdot = linalg.inv(J.T @ J + 0.01 * np.eye(J.shape[1])) @ J.T @ xdot
             else:

@@ -4,7 +4,7 @@ from spatialmath import SE3
 from XArm6 import XArm6
 from C4A601S import C4A601S
 from CytonGamma300DH import CytonGamma300
-from LinearUR3.LinearUR3 import LinearUR3
+from ir_support import LinearUR3
 
 
 from spatialgeometry import Cuboid, Cylinder, Mesh
@@ -21,7 +21,6 @@ class EnvBuilder:
         self.robot.base = SE3(0, 0, 0.5)  # hardcoded height
         self.env.add(self.robot)
         self.robot.q = (0, pi, 0, 0, 0, 0)  # default pose
-
 
         self.frybot = C4A601S()
         self.frybot.base = SE3(0, 2, 0.5)
@@ -202,3 +201,28 @@ class EnvBuilder:
         frybox_full_path = os.path.join(current_dir, "FryboxFull.dae")
         self.fry_box_full = Mesh(filename=frybox_full_path, pose=SE3(100, 100, 100))
         self.env.add(self.fry_box_full)
+
+        # Cup
+        cup_path = os.path.join(current_dir, "Models","Mcdonalds Cup.dae")
+        self.cup = Mesh(filename=cup_path, scale=[0.5]*3, pose=SE3(0, -2.25, 0.5))
+        self.env.add(self.cup)
+
+        # lid
+        cup_lid_path = os.path.join(current_dir, "Models","Mcdonalds Lid.dae")
+        self.cup_lid = Mesh(filename=cup_lid_path, scale=[0.5]*3, pose=SE3(-0.2, -2.0, 0.375))
+        self.env.add(self.cup_lid)
+
+        # straw
+        straw_path = os.path.join(current_dir, "Models","Mcdonalds Straw.dae")
+        self.straw = Mesh(filename=straw_path, scale=[0.5]*3, pose=SE3(-0.2, -2.25, 0.5))
+        self.env.add(self.straw)
+
+        # Drink machine
+        machine_path = os.path.join(current_dir, "Models","Drink Machine.dae")
+        self.machine = Mesh(filename=machine_path, scale=[0.5]*3, pose=SE3(-0.25, -2, 0.35) * SE3.Rz(pi))
+        self.env.add(self.machine)
+
+        # Whole drink
+        whole_drink_path = os.path.join(current_dir, "Models","Whole Drink.dae")
+        self.whole_drink = Mesh(filename=whole_drink_path, scale=[0.5]*3, pose=SE3(-100, 100, 100))
+        self.env.add(self.whole_drink)

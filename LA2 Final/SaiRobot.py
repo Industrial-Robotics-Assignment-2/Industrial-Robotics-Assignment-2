@@ -18,7 +18,7 @@ class FrybotOperations:
         self.estop_event = estop_event
         self.collision_detection = collision_detection
 
-        # Use objects already in your EnvBuilder
+        # Use objects already in the EnvBuilder
         self.Frypile = env_builder.fries_pile
         self.Frybox = env_builder.fry_box
         self.FryboxFull = env_builder.fry_box_full

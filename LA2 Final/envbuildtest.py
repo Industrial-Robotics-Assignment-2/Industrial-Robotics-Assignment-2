@@ -16,7 +16,9 @@ from itertools import combinations
 import roboticstoolbox as rtb
 from C4A601S import C4A601S
 from XArm6 import XArm6
+from CytonGamma300DH import CytonGamma300
 from swift import Swift
+from DrinkBot import DrinkBotOperations
 
 # ---------------------- 1️⃣ INITIALIZE ENVIRONMENT & ROBOTS ----------------------
 env_builder = EnvBuilder()
@@ -37,12 +39,15 @@ q = None
 frybot_collision = CollisionManager(env, cuboid_center=[100, 100, 0], cuboid_scale=(0.1, 0.1, 0.1), prism_scale=(0.25, 0.25, 0.25))
 
 # Jack’s obstacle (different sizes)
-jack_collision = CollisionManager(env,cuboid_center=[100, 100, 0],cuboid_scale=(0.1, 0.1, 0.1), prism_scale=(0.4, 0.4, 0.4)) 
+jack_collision = CollisionManager(env,cuboid_center=[100, 100, 0],cuboid_scale=(0.1, 0.1, 0.1), prism_scale=(0.4, 0.4, 0.4))
+
+drinkbot_collision = CollisionManager(env,cuboid_center=[100, 100, 0],cuboid_scale=(0.1, 0.1, 0.1), prism_scale=(0.4, 0.4, 0.4))
 
 
 # Robot instances
 frybot = FrybotOperations(env_builder.frybot, env_builder, estop_event, frybot_collision)
 jack = JackRobot(env_builder, estop_event, jack_collision)
+drinkbot = DrinkBotOperations(env_builder.CytonGamma300, env_builder, estop_event, drinkbot_collision)
 LinearUR3 = LinearUR3Operator(env_builder, estop_event)
 
 # ---------------------- 2️⃣ FLASK APP ----------------------
@@ -67,7 +72,11 @@ def add_robot():
         'c4a601s': {'model': C4A601S, 'pillar_height': 0.8, 
                     'qlim': [np.deg2rad([-170, 170]),np.deg2rad([-65, 160]),
                              np.deg2rad([-225, 51]),np.deg2rad([-200, 200]),
-                             np.deg2rad([-135, 135]),np.deg2rad([-360, 360])]}
+                             np.deg2rad([-135, 135]),np.deg2rad([-360, 360])]},
+        'CytonGamma300': {'model': CytonGamma300, 'pillar_height': 0.8, 
+                    'qlim': [np.deg2rad([-360, 360]),np.deg2rad([-360, 360]),
+                             np.deg2rad([-360, 360]),np.deg2rad([-360, 360]),
+                             np.deg2rad([-360, 360]),np.deg2rad([-360, 360])]}
     }
 
     if robot_name not in config:
@@ -191,6 +200,7 @@ def spawn_obstacle():
 
     frybot_collision.move_obstacle([0.3, 1.8, 0.5875])
     jack_collision.move_obstacle([0, 0.5, 0.8])
+    drinkbot_collision.move_obstacle([-0.45,-2,0.625])
 
     print("Prism spawned in workspace")
     return jsonify(success=True)
@@ -201,8 +211,12 @@ def move_obstacle_far():
     
     frybot_collision.move_far()
     jack_collision.move_far()
+    drinkbot_collision.move_far()
+
     frybot.collision_event.set()
     jack.collision_event.set()
+    drinkbot.collision_event.set()
+
     print("Prism moved far away")
     return jsonify(success=True)
 
@@ -226,12 +240,17 @@ def run_jack_operations():
     jack.move_closed_box()
     jack.return_robot_home()
 
+def run_drinkbot_operations():
+    drinkbot.animate()
+
 def linearUR3_Operations():
     # linear_operator = LinearUR3Operator(env_builder)
     target_frybox = (-1.4, 0.0, 0.48, 0, 0, np.pi)  # (x, y, z, roll, pitch, yaw)
     LinearUR3.move_object_from_side(env_builder.fry_box_full, target_frybox, steps=120)
     target_burgerbox = (-1.4, 0.4, 0.53, 0, 0, np.pi)
     LinearUR3.move_object_from_side(jack.closed_box, target_burgerbox, steps=120)
+    target_drink = (-1.4, 0.8, 0.5, 0, 0, np.pi)
+    LinearUR3.move_object_from_side(drinkbot.whole_drink, target_drink, steps=120)
 
 def arduinoEstop():
     serial = SerialCom(9600)
@@ -244,47 +263,33 @@ def arduinoEstop():
 def flaskStart():
     app.run(debug=False)
 
-
-
-
-    # serial_com = SerialCom(port='COM3', baudrate=9600, timeout=1)
-    # while True:
-    #     status = serial_com.read_status()
-    #     if status == 'E-STOP':
-    #         estop_event.clear()
-    #         print("🛑 E-STOP from Arduino ACTIVATED")
-    #     elif status == 'RESUME':
-    #         estop_event.set()
-    #         print("▶ RESUMED from Arduino")
-    #     time.sleep(0.1)
-
-
- 
-
 # ---------------------- 5️⃣ MAIN ----------------------
 if __name__ == "__main__":
     # Start Swift stepping loop
     threading.Thread(target=run_swift_loop, daemon=True).start()
 
-
-
-
-    arduino_thread = threading.Thread(target=arduinoEstop, daemon=True).start()
     flask_thread = threading.Thread(target=flaskStart, daemon=True).start()
+
+    time.sleep(2)
+    
+    arduino_thread = threading.Thread(target=arduinoEstop, daemon=True).start()
     
     time.sleep(2)
-    input("Press Enter to start Frybot & Jack operations...")
-    # Create threads for Frybot & Jack
+    input("Press Enter to start operations...")
+    # Create threads for robots
     frybot_thread = threading.Thread(target=run_frybot_operations)
     jack_thread = threading.Thread(target=run_jack_operations)
+    drinkbot_thread = threading.Thread(target=run_drinkbot_operations)
 
-    # Start both
+    # Start all
     frybot_thread.start()
     jack_thread.start()
+    drinkbot_thread.start()
 
-    # Wait for both robots to finish before running LinearUR3
+    # Wait for all robots to finish before running LinearUR3
     frybot_thread.join()
     jack_thread.join()
+    drinkbot_thread.join()
 
-    # Now run Linear UR3 after both are done
+    # Now run Linear UR3 after all are done
     linearUR3_Operations()
