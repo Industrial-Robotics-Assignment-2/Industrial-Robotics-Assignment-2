@@ -1,14 +1,12 @@
 import numpy as np
 import sympy as sp
 import roboticstoolbox as rtb
-import ir_support
 import swift
 
 from spatialmath import SE3
 from scipy import linalg
 from math import pi
 import spatialgeometry as sg
-from test import Robot_Sim as rs
 
 def pos_err(target, solution):
     pos_error = np.linalg.norm(solution - target)
@@ -100,6 +98,13 @@ def RMRC(rob,q,points,t=5,steps=100,):
     print("Error Count: ", err_count, " | Non Error Count: ", non_err_count)
     return q_matrix
 
+def points_between(p1, p2, num=10):
+    p1 = np.asarray(p1, float)
+    p2 = np.asarray(p2, float)
+    pts = np.linspace(p1, p2, num=num)
+   
+    return pts
+
 def funcPoint_Demo():
 
     x = sp.symbols('x')                             # Create Sympy Symbol
@@ -167,5 +172,4 @@ if __name__ == "__main__":
     input("Press Enter for next demo")
 
     RMRC_Demo()
-
     input("Press Enter for next demo")

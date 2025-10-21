@@ -1,3 +1,4 @@
+# XArm6_simple.py
 import swift
 from roboticstoolbox import DHLink, DHRobot
 from roboticstoolbox import jtraj
@@ -17,6 +18,14 @@ class XArm6(DHRobot):
         alpha = [pi/2, 0, 0, pi/2, -pi/2, 0]
         d = [0.267, 0, 0, 0.111, 0.113, 0.097]
         qlim = [[-2*pi, 2*pi]] * 6
+        # qlim = [
+        #     [ -170*pi/180,  170*pi/180 ],  # Joint 1
+        #     [  -90*pi/180,   90*pi/180 ],  # Joint 2
+        #     [ -160*pi/180,  160*pi/180 ],  # Joint 3
+        #     [ -300*pi/180,  300*pi/180 ],  # Joint 4
+        #     [ -120*pi/180,  120*pi/180 ],  # Joint 5
+        #     [ -360*pi/180,  360*pi/180 ],  # Joint 6
+        # ]
 
         # Create DH links
         links = [DHLink(a=a[i], alpha=alpha[i], d=d[i], qlim=qlim[i]) for i in range(6)]
@@ -24,7 +33,7 @@ class XArm6(DHRobot):
         # Initialize DHRobot
         super().__init__(links, name='XArm6')
         # Add cylindrical visualization
-        cyl_viz = CylindricalDHRobotPlot(self, cylinder_radius=0.03, color="#3478f6")
+        cyl_viz = CylindricalDHRobotPlot(self, cylinder_radius=0.03, color="#0d9900")
         cyl_viz.create_cylinders()
 
         # Initial joint configuration
@@ -41,10 +50,8 @@ if __name__ == "__main__":
 
     # Add robot to environment
     env.add(robot)
-    print(f"hello")
 
     env.step()
-    print(f"hi")
 
 
     # ----------------------------
@@ -52,8 +59,6 @@ if __name__ == "__main__":
     q_start = robot.q
     q_goal = [0, -pi/4, pi/3, 0, pi/6, 0]
     q_traj = jtraj(q_start, q_goal, 50).q
-    print(f"bye")
-
 
     # Animate trajectory
     for q in q_traj:
@@ -63,4 +68,3 @@ if __name__ == "__main__":
     # Hold final position
     env.hold()
     time.sleep(2)
-
