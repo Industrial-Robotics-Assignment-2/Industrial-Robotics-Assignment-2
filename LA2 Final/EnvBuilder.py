@@ -4,7 +4,7 @@ from spatialmath import SE3
 from XArm6 import XArm6
 from C4A601S import C4A601S
 from CytonGamma300DH import CytonGamma300
-from ir_support import LinearUR3
+from LinearUR3.LinearUR3 import LinearUR3
 
 
 from spatialgeometry import Cuboid, Cylinder, Mesh
@@ -149,23 +149,38 @@ class EnvBuilder:
             cl.T = SE3(2, y, -0.2)
             self.env.add(cl)
             self.chainlinks.append(cl)
+        
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        stl_path = os.path.join(current_dir, "chainlink.stl")
+        cl = Mesh(stl_path, scale=[0.03,0.03,0.01], color=[1,0,0])
+        cl.T = SE3(-2,3,-0.2) * SE3.Rz(pi/2)
+        self.env.add(cl)
+        cl = Mesh(stl_path, scale=[0.03,0.03,0.01], color=[1,0,0])
+        cl.T = SE3(-2,-0.5,-0.2) * SE3.Rz(pi/2)
+        self.env.add(cl)
+
 
         # Example worker STL
         worker_path = os.path.join(current_dir, "worker.stl")
         self.worker = Mesh(worker_path, scale=[clscale]*3, color=[1,1,0])
-        self.worker.T = SE3(-2,2,0) * SE3.Rz(-pi/4)
+        self.worker.T = SE3(-3,0,0) * SE3.Rz(-pi/2)
         self.env.add(self.worker)
+
+        firstaid_path = os.path.join(current_dir, "firstaid.stl")
+        self.firstaidbox = Mesh(firstaid_path, scale=[clscale/2]*3, color=[0,1,0])  # greebn box
+        self.firstaidbox.T = SE3(-3, -0.8, 0.1) 
+        self.env.add(self.firstaidbox)
 
         # Example button STL
         bscale = 0.003
         button_base_path = os.path.join(current_dir, "buttonbase.stl")
         self.button_base = Mesh(button_base_path, scale=[bscale]*3, color=[1,1,0])
-        self.button_base.T = SE3(-2,1,0.05) * SE3.Rx(-pi/2)
+        self.button_base.T = SE3(-3,0.5,0.05) * SE3.Rx(-pi/2)
         self.env.add(self.button_base)
 
         button_path = os.path.join(current_dir, "button.stl")
         self.button = Mesh(button_path, scale=[bscale]*3, color=[1,0,0])
-        self.button.T = SE3(-2,1,0.1) * SE3.Rx(-pi/2)
+        self.button.T = SE3(-3,0.5,0.1) * SE3.Rx(-pi/2)
         self.env.add(self.button)
     
     # ---------------- DAE Objects ----------------
