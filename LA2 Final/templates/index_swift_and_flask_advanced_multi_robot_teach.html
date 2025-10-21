@@ -221,6 +221,7 @@
   <button id="btn-ur5" onclick="addRobot('ur5', 0.5, 0.5, 0)">Add UR5</button>
   <button id="btn-XArm6" onclick="addRobot('XArm6', -0.3, -0.3, 0)">Add XArm6</button>
   <button id="btn-c4" onclick="addRobot('c4a601s', 0.0, 0.0, 0)">Add C4A601S</button>
+  <button id="btn-Cyton" onclick="addRobot('CytonGamma300', 0.0, 0.0, 0)">Add CytonGamma300</button>
   <button onclick="flailArms()">Flail Arms</button>
   <button id="mode-toggle">Switch to Cartesian Mode</button>
 
@@ -274,7 +275,7 @@
         controlledRobot = data;
         addedRobots.add(robotName);
         document.getElementById('robot-heading').innerText = `Controlling: ${robotName.toUpperCase()}`;
-        ['ur5','XArm6','c4a601s'].forEach(name => {
+        ['ur5','XArm6','c4a601s, CytonGamma300'].forEach(name => {
           const btn = document.getElementById(`btn-${name}`);
           if (name === robotName) btn.innerText = `✅ Controlling ${name.toUpperCase()}`;
           else if (addedRobots.has(name)) btn.innerText = `Control ${name.toUpperCase()}`;
@@ -395,7 +396,7 @@
             controlledRobot = null;
             slidersContainer.innerHTML = '';
             document.getElementById('robot-heading').innerText = "No Robot Selected";
-            ['ur5','XArm6','c4a601s'].forEach(name => {
+            ['ur5','XArm6','c4a601s','CytonGamma300'].forEach(name => {
               document.getElementById(`btn-${name}`).innerText = `Add ${name.toUpperCase()}`;
             });
           }
