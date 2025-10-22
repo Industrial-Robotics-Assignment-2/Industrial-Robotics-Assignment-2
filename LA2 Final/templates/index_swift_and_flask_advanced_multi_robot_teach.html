@@ -1,205 +1,3 @@
-<!-- <!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>Multi-Robot Joint/Cartesian Controller</title>
-  <style>
-    body { font-family: Arial, Helvetica, sans-serif; margin: 18px; }
-    .slider-container { margin-bottom: 8px; }
-    label { display: inline-block; width: 100px; }
-    #robot-heading { margin-bottom: 12px; }
-    button { margin-right: 6px; margin-bottom: 6px; }
-    .status { margin-top: 12px; font-weight: bold; }
-  </style>
-</head>
-<body>
-  <h2 id="robot-heading">No Robot Selected</h2>
-
-  <button id="btn-ur5" onclick="addRobot('ur5', 0.5, 0.5, 0)">Add UR5</button>
-  <button id="btn-ur3" onclick="addRobot('ur3', -0.3, -0.3, 0)">Add UR3</button>
-  <button id="btn-c4" onclick="addRobot('c4a601s', 0.0, 0.0, 0)">Add C4A601S</button>
-  <button onclick="flailArms()">Flail Arms</button>
-  <button id="mode-toggle">Switch to Cartesian Mode</button>
-
-  <div id="sliders-container"></div>
-
-  <div style="margin-top:12px;">
-    <button onclick="estop()">🛑 E-STOP</button>
-    <button onclick="resume()">▶ Resume</button>
-    <button onclick="resetEnv()">🔄 Reset Environment</button>
-  </div>
-
-  <div class="status" id="status">Status: Ready</div>
-
-  <script>
-    let controlMode = 'joint'; // 'joint' or 'cartesian'
-    let controlledRobot = null;
-    const slidersContainer = document.getElementById('sliders-container');
-    const toggleBtn = document.getElementById('mode-toggle');
-    const statusEl = document.getElementById('status');
-
-    const cartesianAxes = ['X', 'Y', 'Z'];
-    const cartesianRanges = [
-      { min: -0.3, max: 0.3 },
-      { min: -0.3, max: 0.3 },
-      { min: -0.3, max: 0.3 }
-    ];
-
-    const addedRobots = new Set();
-
-    toggleBtn.onclick = () => {
-      if (!controlledRobot) return;
-      controlMode = controlMode === 'joint' ? 'cartesian' : 'joint';
-      toggleBtn.innerText = controlMode === 'joint' ? 'Switch to Cartesian Mode' : 'Switch to Joint Mode';
-      renderSliders();
-    };
-
-    function addRobot(robotName, tx, ty, tz) {
-      fetch('/add_robot', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ robot: robotName, tx, ty, tz })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (!data.success) {
-          alert("Error adding robot: " + (data.error || "unknown"));
-          return;
-        }
-        controlledRobot = data;
-        addedRobots.add(robotName);
-        document.getElementById('robot-heading').innerText = `Controlling: ${robotName.toUpperCase()}`;
-        ['ur5','ur3','c4a601s'].forEach(name => {
-          const btn = document.getElementById(`btn-${name}`);
-          if (name === robotName) btn.innerText = `✅ Controlling ${name.toUpperCase()}`;
-          else if (addedRobots.has(name)) btn.innerText = `Control ${name.toUpperCase()}`;
-          else btn.innerText = `Add ${name.toUpperCase()}`;
-        });
-        renderSliders();
-        statusEl.innerText = "Status: Robot added";
-      });
-    }
-
-    function renderSliders() {
-      slidersContainer.innerHTML = '';
-      if (!controlledRobot) return;
-
-      if (controlMode === 'joint') {
-        const qlim = controlledRobot.qlim;
-        const qvals = controlledRobot.q;
-
-        for (let i = 0; i < qvals.length; i++) {
-          const container = document.createElement('div');
-          container.className = 'slider-container';
-          const label = document.createElement('label');
-          label.innerText = `Joint ${i+1}:`;
-          const slider = document.createElement('input');
-          slider.type = 'range';
-          // qlim is [ [min...], [max...] ] — values are likely in radians
-          slider.min = qlim[0][i];
-          slider.max = qlim[1][i];
-          slider.step = 0.01;
-          slider.value = qvals[i];
-          const display = document.createElement('span');
-          display.innerText = ` ${parseFloat(slider.value).toFixed(2)}`;
-          display.style.marginLeft = '10px';
-          display.style.width = '80px';
-          display.style.display = 'inline-block';
-
-          slider.oninput = () => {
-            display.innerText = ` ${parseFloat(slider.value).toFixed(2)}`;
-            fetch('/update_joint', {
-              method: 'POST',
-              headers: {'Content-Type': 'application/json'},
-              body: JSON.stringify({ index: i, value: parseFloat(slider.value) })
-            });
-          };
-
-          container.appendChild(label);
-          container.appendChild(slider);
-          container.appendChild(display);
-          slidersContainer.appendChild(container);
-        }
-      } else { // cartesian mode
-        for (let i = 0; i < 3; i++) {
-          const container = document.createElement('div');
-          container.className = 'slider-container';
-          const label = document.createElement('label');
-          label.innerText = `${cartesianAxes[i]} (m):`;
-          const slider = document.createElement('input');
-          slider.type = 'range';
-          slider.min = cartesianRanges[i].min;
-          slider.max = cartesianRanges[i].max;
-          slider.step = 0.01;
-          slider.value = 0;
-          const display = document.createElement('span');
-          display.innerText = ` ${slider.value}`;
-          display.style.marginLeft = '10px';
-          display.style.width = '80px';
-          display.style.display = 'inline-block';
-
-          slider.oninput = () => {
-            display.innerText = ` ${parseFloat(slider.value).toFixed(2)}`;
-            fetch('/update_cartesian', {
-              method: 'POST',
-              headers: {'Content-Type': 'application/json'},
-              body: JSON.stringify({ axis: i, value: parseFloat(slider.value) })
-            })
-            .then(r => r.json())
-            .then(d => {
-              if (!d.success) console.warn("IK failed or error:", d);
-            });
-          };
-
-          container.appendChild(label);
-          container.appendChild(slider);
-          container.appendChild(display);
-          slidersContainer.appendChild(container);
-        }
-      }
-    }
-
-    function flailArms() {
-      fetch('/flail', { method: 'POST' }).then(res => {
-        if (res.ok) {
-          statusEl.innerText = "Status: Flailing arms";
-        }
-      });
-    }
-
-    function estop() {
-      fetch("/emergency_stop", { method: "POST" })
-        .then(() => {
-          statusEl.innerText = "Status: E-STOP (paused)";
-        });
-    }
-
-    function resume() {
-      fetch("/resume", { method: "POST" })
-        .then(() => {
-          statusEl.innerText = "Status: Resumed";
-        });
-    }
-
-    function resetEnv() {
-      fetch("/reset_env", { method: "POST" })
-        .then(r => r.json())
-        .then(d => {
-          if (d.success) {
-            statusEl.innerText = "Status: Environment reset";
-            controlledRobot = null;
-            slidersContainer.innerHTML = '';
-            document.getElementById('robot-heading').innerText = "No Robot Selected";
-            ['ur5','ur3','c4a601s'].forEach(name => {
-              document.getElementById(`btn-${name}`).innerText = `Add ${name.toUpperCase()}`;
-            });
-          }
-        });
-    }
-  </script>
-</body>
-</html> -->
-
 
 <!DOCTYPE html>
 <html>
@@ -218,10 +16,9 @@
 <body>
   <h2 id="robot-heading">No Robot Selected</h2>
 
-  <button id="btn-ur5" onclick="addRobot('ur5', 0.5, 0.5, 0)">Add UR5</button>
+  <button id="btn-CytonGamma300" onclick="addRobot('CytonGamma300', 0.5, 0.5, 0)">Add CytonGamma300</button>
   <button id="btn-XArm6" onclick="addRobot('XArm6', -0.3, -0.3, 0)">Add XArm6</button>
   <button id="btn-c4" onclick="addRobot('c4a601s', 0.0, 0.0, 0)">Add C4A601S</button>
-  <button id="btn-Cyton" onclick="addRobot('CytonGamma300', 0.0, 0.0, 0)">Add CytonGamma300</button>
   <button onclick="flailArms()">Flail Arms</button>
   <button id="mode-toggle">Switch to Cartesian Mode</button>
 
@@ -275,7 +72,7 @@
         controlledRobot = data;
         addedRobots.add(robotName);
         document.getElementById('robot-heading').innerText = `Controlling: ${robotName.toUpperCase()}`;
-        ['ur5','XArm6','c4a601s, CytonGamma300'].forEach(name => {
+        ['CytonGamma300','XArm6','c4a601s'].forEach(name => {
           const btn = document.getElementById(`btn-${name}`);
           if (name === robotName) btn.innerText = `✅ Controlling ${name.toUpperCase()}`;
           else if (addedRobots.has(name)) btn.innerText = `Control ${name.toUpperCase()}`;
@@ -396,7 +193,7 @@
             controlledRobot = null;
             slidersContainer.innerHTML = '';
             document.getElementById('robot-heading').innerText = "No Robot Selected";
-            ['ur5','XArm6','c4a601s','CytonGamma300'].forEach(name => {
+            ['CytonGamma300','XArm6','c4a601s'].forEach(name => {
               document.getElementById(`btn-${name}`).innerText = `Add ${name.toUpperCase()}`;
             });
           }
