@@ -170,12 +170,13 @@ class DrinkBotOperations:
         for q in q_matrix:
             self.estop_event.wait()
             self.collision_event.wait()
+            self.robot.q = q
             q_list = [float(a) for a in q]  # convert to Python floats
+            self.robot.q = q_list
             if self.collision_detection.is_collision(self.robot, [q_list]):
-                print(f"Collision detected at joint {q_list}")
+                print(f"Collision detected at joint for DrinkBot {q_list}")
                 self.collision_event.clear()
             self.whole_drink.T = self.robot.fkine(self.robot.q) * SE3.Ry(pi/2) * SE3(0,0,-0.15)
-            self.robot.q = q
             self.safe_step()
 
         # reset

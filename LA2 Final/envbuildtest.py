@@ -36,7 +36,7 @@ controlled_robot = [None]
 q = None
 
 
-frybot_collision = CollisionManager(env, cuboid_center=[100, 100, 0], cuboid_scale=(0.1, 0.1, 0.1), prism_scale=(0.25, 0.25, 0.25))
+frybot_collision = CollisionManager(env, cuboid_center=[100, 100, 0], cuboid_scale=(0.1, 0.1, 0.1), prism_scale=(0.2, 0.2, 0.2))
 
 # Jack’s obstacle (different sizes)
 jack_collision = CollisionManager(env,cuboid_center=[100, 100, 0],cuboid_scale=(0.1, 0.1, 0.1), prism_scale=(0.4, 0.4, 0.4))
@@ -64,7 +64,10 @@ def add_robot():
     tx, ty, tz = data.get('tx', 0), data.get('ty', 0), data.get('tz', 0)
 
     config = {
-        'ur5': {'model': rtb.models.UR5, 'pillar_height': 1.0},
+        'CytonGamma300': {'model': CytonGamma300, 'pillar_height': 0.8, 
+                    'qlim': [np.deg2rad([-360, 360]),np.deg2rad([-360, 360]),
+                             np.deg2rad([-360, 360]),np.deg2rad([-360, 360]),
+                             np.deg2rad([-360, 360]),np.deg2rad([-360, 360])]},
         'XArm6': {'model': XArm6, 'pillar_height': 0.6, 
                     'qlim': [np.deg2rad([-170, 170]),np.deg2rad([-90, 90]),
                              np.deg2rad([-160, 160]),np.deg2rad([-300, 300]),
@@ -73,10 +76,6 @@ def add_robot():
                     'qlim': [np.deg2rad([-170, 170]),np.deg2rad([-65, 160]),
                              np.deg2rad([-225, 51]),np.deg2rad([-200, 200]),
                              np.deg2rad([-135, 135]),np.deg2rad([-360, 360])]},
-        'CytonGamma300': {'model': CytonGamma300, 'pillar_height': 0.8, 
-                    'qlim': [np.deg2rad([-360, 360]),np.deg2rad([-360, 360]),
-                             np.deg2rad([-360, 360]),np.deg2rad([-360, 360]),
-                             np.deg2rad([-360, 360]),np.deg2rad([-360, 360])]}
     }
 
     if robot_name not in config:
@@ -198,7 +197,7 @@ def reset_env():
 @app.route("/spawn_obstacle", methods=["POST"])
 def spawn_obstacle():
 
-    frybot_collision.move_obstacle([0.3, 1.8, 0.5875])
+    frybot_collision.move_obstacle([-0.45, 1.8, 0.5875])
     jack_collision.move_obstacle([0, 0.5, 0.8])
     drinkbot_collision.move_obstacle([-0.45,-2,0.625])
 
@@ -293,3 +292,5 @@ if __name__ == "__main__":
 
     # Now run Linear UR3 after all are done
     linearUR3_Operations()
+
+    input("Press Enter to exit...")

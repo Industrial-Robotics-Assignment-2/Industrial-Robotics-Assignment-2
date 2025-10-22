@@ -219,7 +219,7 @@ class EnvBuilder:
 
         # Drink machine
         machine_path = os.path.join(current_dir, "Models","Drink Machine.dae")
-        self.machine = Mesh(filename=machine_path, scale=[0.5]*3, pose=SE3(-0.25, -2, 0.35) * SE3.Rz(pi))
+        self.machine = Mesh(filename=machine_path, scale=[0.5]*3, pose=SE3(0.25, -2, 0.6) * SE3.Rz(pi))
         self.env.add(self.machine)
 
         # Whole drink
